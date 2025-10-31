@@ -1,0 +1,61 @@
+name: Build and Release MIME Database
+
+on:
+  # This allows you to run the workflow manually from the "Actions" tab
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'The tag to create (e.g., v1.0.0 or db-20251031)'
+        required: true
+        type: string
+      release_name:
+        description: 'The name of the release (e.g., "MIME Database v1.0.0")'
+        required: true
+        type: string
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    
+    # We need write permissions to create a tag and release
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install dependencies (shared-mime-info and zip)
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y shared-mime-info zip
+
+    - name: Package the compiled database
+      run: |
+        # We 'cd' to the parent directory so that the 'mime' folder
+        # is at the root of the zip file, not the full system path.
+        cd /usr/share
+        
+        # We save the zip file back to our repository's workspace directory
+        zip -r ${{ github.workspace }}/mime-database.zip mime
+
+    - name: Create GitHub Release and Upload Artifact
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        # Use the tag name from the manual input
+        tag_name: ${{ inputs.tag_name }}
+        
+        # Use the release name from the manual input
+        release_name: ${{ inputs.release_name }}
+        
+        # Optional: A description for the release
+        body: |
+          This release contains the compiled freedesktop.org shared MIME database,
+          generated on an Ubuntu runner. This artifact can be used by
+          applications that rely on mime detection libraries that uses 
+          freedesktop.org shared MIME database.
+        
+        # Tell the action to attach the zip file we just created
+        files: ${{ github.workspace }}/mime-database.zip
