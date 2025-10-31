@@ -1,0 +1,36 @@
+name: Build Mime Database (Linux)
+
+on:
+  # Allows you to run this action manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build-database:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # 1. Install the shared-mime-info package
+    - name: Install shared-mime-info
+      run: |
+        sudo apt-get update
+        # This command installs the package and its post-install
+        # script automatically runs 'update-mime-database'
+        sudo apt-get install -y shared-mime-info
+
+    # 2. (Optional) Verify the files were created
+    - name: List generated mime files
+      run: ls -l /usr/share/mime
+
+    # 3. Upload the entire 'mime' directory as an artifact
+    - name: Upload Mime Database Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        # This will be the name of the downloadable file
+        name: mime-database-linux
+        
+        # This is the standard path on Ubuntu where the
+        # compiled 'magic' file and all its companions are stored.
+        path: /usr/share/mime
